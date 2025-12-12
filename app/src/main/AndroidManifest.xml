@@ -11,26 +11,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.JumpingEgg">
-        <activity
-            android:name=".view.DoaGameActivity"
-            android:exported="false"
-            android:label="@string/title_activity_doa_game"
-            android:theme="@style/Theme.MyApplication" />
-        <activity
-            android:name=".view.GameActivity"
-            android:exported="false"
-            android:label="@string/title_activity_game"
-            android:theme="@style/Theme.MyApplication" />
-        <activity
-            android:name=".view.InstructionActivity"
-            android:exported="false"
-            android:label="@string/title_activity_instruction"
-            android:theme="@style/Theme.MyApplication" />
-        <activity
-            android:name=".view.RankingActivity"
-            android:exported="false"
-            android:label="@string/title_activity_ranking"
-            android:theme="@style/Theme.MyApplication" />
+
         <activity
             android:name=".view.main.MainActivity"
             android:exported="true"
