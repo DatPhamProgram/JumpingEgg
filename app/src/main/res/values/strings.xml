@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="title_activity_ranking">RankingActivity</string>
+    <string name="title_activity_instruction">InstructionActivity</string>
+    <string name="title_activity_game">GameActivity</string>
+    <string name="title_activity_doa_game">DoaGameActivity</string>
+</resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/values/styles.xml -->
+<resources>
+    <style name="Theme.JumpingEgg" parent="android:Theme.Material.Light.NoActionBar" />
+
+</resources>
