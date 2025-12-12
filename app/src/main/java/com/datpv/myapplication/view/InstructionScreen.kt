@@ -1,6 +1,5 @@
-package com.datpv.myapplication.view.instruction
+package com.datpv.myapplication.view
 
-import android.R.attr.top
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column

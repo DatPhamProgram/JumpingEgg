@@ -1,4 +1,4 @@
-package com.datpv.myapplication.view.main
+package com.datpv.myapplication.view
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -6,13 +6,15 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.datpv.myapplication.view.instruction.InstructionScreen
 import com.datpv.myapplication.view.theme.JumpingEggTheme
 
 class MainActivity : ComponentActivity() {
@@ -37,10 +39,10 @@ fun AppNavigation (navController: NavHostController) {
     ){
         composable ("home") {
             HomeScreen(
-                onStartGameClick = {},
-                onRankingClick = {},
+                onStartGameClick = {navController.navigate("game")},
+                onRankingClick = {navController.navigate("ranking")},
                 onInstructionClick = {navController.navigate("instruction")},
-                onDoaGameClick = {}
+                onDoaGameClick = {navController.navigate("doa")}
 
             )
         }
@@ -52,7 +54,12 @@ fun AppNavigation (navController: NavHostController) {
             )
         }
         composable("game") {
-            SimpleStubScreen("Game Screen") { navController.popBackStack() }
+            GameScreen (
+                onBack = {
+                    navController.popBackStack()
+                }
+            )
+
         }
         composable("ranking") {
             SimpleStubScreen("Ranking Screen") { navController.popBackStack() }
@@ -68,12 +75,12 @@ private fun SimpleStubScreen(
     title: String,
     onBack: () -> Unit
 ) {
-    androidx.compose.material3.Button(
+    Button(
         onClick = onBack,
-        modifier = androidx.compose.ui.Modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(32.dp)
     ) {
-        androidx.compose.material3.Text(text = "$title - Back")
+        Text(text = "$title - Back")
     }
 }

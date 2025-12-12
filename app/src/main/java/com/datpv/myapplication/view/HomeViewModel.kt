@@ -1,4 +1,4 @@
-package com.datpv.myapplication.view.main
+package com.datpv.myapplication.view
 
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
