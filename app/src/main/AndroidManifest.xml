@@ -22,6 +22,7 @@
             android:label="@string/title_activity_game"
             android:theme="@style/Theme.MyApplication" />
         <activity
+            android:name=".view.InstructionActivity"
             android:exported="false"
             android:label="@string/title_activity_instruction"
             android:theme="@style/Theme.MyApplication" />
