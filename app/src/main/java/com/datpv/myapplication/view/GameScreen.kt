@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.datpv.myapplication.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -68,7 +69,7 @@ fun GameScreen(onBack: () -> Unit) {
 
     val scope = rememberCoroutineScope()
 
-    // ✅ CameraY: scroll thật (không reset)
+    // ✅ CameraY: scroll thật
     val cameraY = remember { Animatable(0f) }
     var isScrolling by remember { mutableStateOf(false) }
 
@@ -85,26 +86,32 @@ fun GameScreen(onBack: () -> Unit) {
         val baseY3 = h * 0.22f
         val stepY = (baseY1 - baseY2).coerceAtLeast(140f)
 
-        // ✅ lần đầu 3 rỗ, sau đó thành 4 và giữ 4
-        var platformCount by remember { mutableStateOf(3) }
+        // ✅ luôn 4 rỗ
+        val platformCount = 4
 
-        // ===== WORLD baskets =====
+        // ===== WORLD baskets (start 4) =====
         val baskets = remember {
             mutableStateListOf(
                 Basket(x = w * 0.08f, y = baseY1, dir = 1f,  speed = 3.4f),
                 Basket(x = w * 0.58f, y = baseY2, dir = -1f, speed = 3.8f),
                 Basket(x = w * 0.18f, y = baseY3, dir = 1f,  speed = 4.2f),
+                Basket(x = w * 0.70f, y = baseY3 - stepY, dir = -1f, speed = 4.0f),
             )
         }
 
         // ===== STATES =====
         var isEggFlying by remember { mutableStateOf(false) }
         var basketWithEgg by remember { mutableStateOf(-1) } // index in baskets, -1 = outside
-        var score by remember { mutableStateOf(0) }          // dùng cho banner + target step
+
+        // ✅ tách 2 score:
+        // roundStep: tiến độ trong vòng hiện tại (0..platformCount). Dùng để target rỗ
+        var roundStep by remember { mutableStateOf(0) }
+        // totalScore: hiển thị banner, cộng dồn, KHÔNG reset khi scroll
+        var totalScore by remember { mutableStateOf(0) }
 
         // ✅ Egg dùng WORLD Y để camera kéo cùng nhau
-        var eggX by remember { mutableStateOf(w * 0.5f - eggW / 2f) } // world x
-        var eggY by remember { mutableStateOf(h - bannerHeight - eggH - bottomSafePadding) } // world y
+        var eggX by remember { mutableStateOf(w * 0.5f - eggW / 2f) }
+        var eggY by remember { mutableStateOf(h - bannerHeight - eggH - bottomSafePadding) }
         var velY by remember { mutableStateOf(0f) }
         var prevEggBottomY by remember { mutableStateOf(eggY + eggH) }
 
@@ -119,14 +126,11 @@ fun GameScreen(onBack: () -> Unit) {
         fun desiredBottomScreenY(): Float =
             h - bannerHeight - basketH - basketBottomGap
 
-        fun resetEggBottom() {
-            isEggFlying = false
-            basketWithEgg = -1
-            velY = 0f
-            eggX = w * 0.5f - eggW / 2f
-            // egg world y = cameraY + (screen bottom)
-            eggY = cameraY.value + (h - bannerHeight - eggH - bottomSafePadding)
-            prevEggBottomY = eggY + eggH
+        fun computeJumpVelocityTo(targetWorldY: Float): Float {
+            val desiredPeak = targetWorldY - 80f
+            val dy = max(0f, eggY - desiredPeak)
+            val v = -sqrt(2f * gravity * dy)
+            return v.coerceIn(-36f, -18f)
         }
 
         fun resetGame() {
@@ -135,8 +139,9 @@ fun GameScreen(onBack: () -> Unit) {
             isScrolling = false
             scope.launch { cameraY.snapTo(0f) }
 
-            score = 0
-            platformCount = 3
+            roundStep = 0
+            totalScore = 0
+
             isEggFlying = false
             basketWithEgg = -1
             velY = 0f
@@ -147,20 +152,13 @@ fun GameScreen(onBack: () -> Unit) {
                     Basket(x = w * 0.08f, y = baseY1, dir = 1f,  speed = 3.4f),
                     Basket(x = w * 0.58f, y = baseY2, dir = -1f, speed = 3.8f),
                     Basket(x = w * 0.18f, y = baseY3, dir = 1f,  speed = 4.2f),
+                    Basket(x = w * 0.70f, y = baseY3 - stepY, dir = -1f, speed = 4.0f),
                 )
             )
 
             eggX = w * 0.5f - eggW / 2f
             eggY = h - bannerHeight - eggH - bottomSafePadding
             prevEggBottomY = eggY + eggH
-        }
-
-        fun computeJumpVelocityTo(targetWorldY: Float): Float {
-            // peak hơi cao hơn
-            val desiredPeak = targetWorldY - 80f
-            val dy = max(0f, eggY - desiredPeak)
-            val v = -sqrt(2f * gravity * dy)
-            return v.coerceIn(-36f, -18f)
         }
 
         fun spawnOneBasketAboveTop() {
@@ -175,69 +173,70 @@ fun GameScreen(onBack: () -> Unit) {
         }
 
         /**
-         * ✅ Camera scroll:
-         * - Không reset baskets.
-         * - Animate cameraY để basketWithEgg (top-most) đi xuống đúng vị trí bottom (ngay trên banner)
-         * - Trong lúc scroll, vì baskets đã có cái nằm trên top (worldY nhỏ), nên sẽ “lộ ra” dần.
-         * - Sau scroll xong: giữ đúng platformCount baskets visible (cắt bớt basket quá thấp).
+         * ✅ Scroll bền vững (không kẹt vòng 3+):
+         * - Camera kéo xuống để rỗ đang chứa trứng (trên cùng) về vị trí bottom (ngay trên banner)
+         * - Sau khi animate xong: SNAP lại 4 rỗ về đúng 4 tầng chuẩn (bottom -> top)
+         * - Giữ 4 rỗ mãi mãi, vòng sau chơi dễ như vòng đầu
+         * - totalScore KHÔNG reset
          */
         fun startScrollDownAnimation() {
             if (isScrolling) return
             isScrolling = true
 
-            // lần đầu: 3 -> 4
-            if (platformCount == 3) platformCount = 4
-
-            // ✅ đảm bảo có basket ở phía trên để lộ ra khi camera kéo
-            while (baskets.size < platformCount) {
-                spawnOneBasketAboveTop()
-            }
-            // mỗi vòng scroll: thêm 1 cái ở trên cho “cảm giác vô tận”
+            // tạo cảm giác có rỗ sẵn ở trên
             spawnOneBasketAboveTop()
 
             scope.launch {
-                // basket đang chứa trứng là top-most vừa bắt được
-                val eggBasketIdx = basketWithEgg
-                if (eggBasketIdx < 0) {
+                try {
+                    val eggIdx = basketWithEgg
+                    if (eggIdx < 0 || eggIdx > baskets.lastIndex) return@launch
+
+                    // kéo camera để rỗ đang chứa trứng về đúng bottomScreenY
+                    val eggBasketWorldY = baskets[eggIdx].y
+                    val targetCamera = eggBasketWorldY - desiredBottomScreenY()
+
+                    cameraY.animateTo(
+                        targetValue = targetCamera,
+                        animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+                    )
+
+                    // đảm bảo có đủ candidate
+                    while (baskets.size < platformCount) {
+                        spawnOneBasketAboveTop()
+                    }
+
+                    // bottomWorldY tương ứng vị trí bottom trên màn
+                    val bottomWorldY = cameraY.value + desiredBottomScreenY()
+
+                    // chọn 4 rỗ gần khu vực chơi nhất (gần bottomWorldY)
+                    val chosenIndices = baskets
+                        .mapIndexed { idx, b -> idx to abs(b.y - bottomWorldY) }
+                        .sortedBy { it.second }
+                        .take(platformCount)
+                        .map { it.first }
+
+                    val chosen = chosenIndices.map { baskets[it] }
+                        .sortedByDescending { it.y } // bottom -> top
+
+                    // SNAP lại đúng 4 tầng
+                    val snapped = chosen.mapIndexed { i, b ->
+                        b.copy(y = bottomWorldY - (i * stepY))
+                    }
+
+                    baskets.clear()
+                    baskets.addAll(snapped)
+
+                    // đặt trứng vào rỗ dưới cùng
+                    val bottomIdx = baskets.indices.maxBy { baskets[it].y }
+                    basketWithEgg = bottomIdx
+
+                    // vòng mới: đã đứng ở rỗ dưới => roundStep=1
+                    roundStep = 1
+                    isEggFlying = false
+                    velY = 0f
+                } finally {
                     isScrolling = false
-                    return@launch
                 }
-
-                val eggBasketWorldY = baskets[eggBasketIdx].y
-
-                // ta muốn sau scroll: eggBasket nằm ở bottomScreenY
-                val targetCamera = eggBasketWorldY - desiredBottomScreenY()
-
-                cameraY.animateTo(
-                    targetValue = targetCamera,
-                    animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
-                )
-
-                // Sau scroll: cắt bớt baskets quá thấp (screenY > bottom giới hạn)
-                // screenY = worldY - cameraY
-                val bottomLimitScreen = desiredBottomScreenY() + 30f
-                val keep = baskets
-                    .mapIndexed { idx, b -> idx to (b.y - cameraY.value) }
-                    .filter { (_, screenY) -> screenY <= bottomLimitScreen }
-                    .sortedBy { it.second } // top->bottom
-                    .takeLast(platformCount) // giữ đúng N cái gần dưới (đủ chơi)
-
-                val keepIndices = keep.map { it.first }.toSet()
-                val newList = baskets.filterIndexed { idx, _ -> idx in keepIndices }
-
-                baskets.clear()
-                baskets.addAll(newList)
-
-                // re-map basketWithEgg (vì list đã đổi)
-                val bottomIdx = baskets.indices.maxBy { baskets[it].y } // world y lớn nhất
-                basketWithEgg = bottomIdx
-
-                // bắt đầu vòng mới dễ như vòng 1: egg đang ở rỗ dưới cùng
-                score = 1
-                isEggFlying = false
-                velY = 0f
-
-                isScrolling = false
             }
         }
 
@@ -268,15 +267,17 @@ fun GameScreen(onBack: () -> Unit) {
                     } else if (isEggFlying) {
 
                         val order = orderBottomToTop()
-                        val step = min(score, platformCount - 1)
+
+                        // target theo roundStep (0..3)
+                        val step = min(roundStep, platformCount - 1)
                         val targetIndex = order[min(step, order.lastIndex)]
                         val t = baskets[targetIndex]
 
-                        // aim assist nhẹ theo X (WORLD)
+                        // aim assist theo X (WORLD)
                         val targetCenterX = t.x + basketW / 2f
                         val eggCenterX = eggX + eggW / 2f
 
-                        // chỉ assist khi gần theo Y (so sánh SCREEN để giống người chơi thấy)
+                        // assist theo Y (SCREEN)
                         val mouthTopScreen = (t.y - cameraY.value) + mouthOffsetY
                         val eggBottomScreenBefore = (eggY - cameraY.value) + eggH
                         val nearInY = (mouthTopScreen - eggBottomScreenBefore) in 0f..assistOnlyWhenNear
@@ -290,10 +291,9 @@ fun GameScreen(onBack: () -> Unit) {
                         velY += gravity
                         eggY += velY
 
-                        // hitbox mouth (SCREEN for Y, WORLD for X)
+                        // mouth hitbox (WORLD)
                         val mouthLeft = t.x + mouthPaddingX
                         val mouthRight = t.x + basketW - mouthPaddingX
-
                         val mouthTopWorld = t.y + mouthOffsetY
                         val mouthBottomWorld = mouthTopWorld + mouthHeight
 
@@ -307,12 +307,15 @@ fun GameScreen(onBack: () -> Unit) {
 
                         if (falling && inX && crossedMouth) {
                             basketWithEgg = targetIndex
-                            score = min(platformCount, step + 1)
                             isEggFlying = false
                             velY = 0f
 
-                            // bắt rỗ top => scroll camera
-                            if (score == platformCount) {
+                            // update round + total
+                            roundStep = min(platformCount, step + 1)
+                            totalScore += 1
+
+                            // bắt rỗ top => scroll
+                            if (roundStep == platformCount) {
                                 startScrollDownAnimation()
                             }
                         }
@@ -321,7 +324,7 @@ fun GameScreen(onBack: () -> Unit) {
                         val bottomLimitScreen = h - bannerHeight - 6f
                         val eggScreenY = eggY - cameraY.value
                         if (eggScreenY > bottomLimitScreen) {
-                            finalScore = score
+                            finalScore = totalScore
                             gameOver = true
                             isEggFlying = false
                             velY = 0f
@@ -433,7 +436,7 @@ fun GameScreen(onBack: () -> Unit) {
                 )
             }
 
-            // Banner score
+            // Banner score (✅ totalScore không reset khi scroll)
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -448,7 +451,7 @@ fun GameScreen(onBack: () -> Unit) {
                 )
 
                 Text(
-                    text = score.toString(),
+                    text = totalScore.toString(),
                     color = Color.Red,
                     fontSize = 32.sp,
                     modifier = Modifier
