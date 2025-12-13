@@ -1,20 +1,13 @@
 package com.datpv.myapplication.view
 
-import android.R.attr.fontWeight
-import androidx.benchmark.traceprocessor.Row
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -94,7 +87,7 @@ fun EndGameScreen(
 
             // Back Home
             Image(
-                painter = painterResource(id = R.drawable.ranking_btn_01_sw),
+                painter = painterResource(id = R.drawable.ranking_btn_01),
                 contentDescription = "Back Home",
                 modifier = Modifier
                     .size(64.dp)

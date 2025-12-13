@@ -2,7 +2,6 @@ package com.datpv.myapplication.view
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.datpv.myapplication.database.AppDatabase
 import com.datpv.myapplication.repository.ScoreRepository
