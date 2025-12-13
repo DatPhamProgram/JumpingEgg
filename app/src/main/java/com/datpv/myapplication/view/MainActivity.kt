@@ -92,13 +92,23 @@ fun AppNavigation (navController: NavHostController) {
 
         composable("ranking") {
             RankingScreen(
-                onBack = { navController.popBackStack() }
+                onBack = {
+                    navController.navigate("home") {
+                        popUpTo("home") { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
             )
 
         }
         composable("doa") {
            DOAGameScreen (
-               onBack = {navController.popBackStack()}
+               onBack = {
+                   navController.navigate("home") {
+                       popUpTo("home") { inclusive = false }
+                       launchSingleTop = true
+                   }
+               }
            )
         }
 

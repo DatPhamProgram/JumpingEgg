@@ -17,6 +17,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.datpv.myapplication.R
@@ -42,21 +43,31 @@ fun GameScreen(
 ) {
 
     // =========================
-    // ✅ ADS: Interstitial
+    // ✅ ADS: Interstitial (UPDATED)
     // =========================
     val context = LocalContext.current
     val activity = context as? Activity
-    var totalScoreDisplayInterstitial = 50
-    val scoreOffSet = 50
+
+    var totalScoreDisplayInterstitial = 30
+    val scoreOffSet = 30
+
     val interstitialUnitId = stringResource(R.string.admob_interstitial_unit_id)
     val interstitialManager = remember(interstitialUnitId) { InterstitialAdManager(interstitialUnitId) }
 
-    var hasShownScore10Ad by remember { mutableStateOf(false) }
+    // state cũ của bạn (giữ nguyên)
+    var hasShownScore10Ad by remember { mutableStateOf(false) } // bạn đang set true nhưng không dùng tiếp, mình giữ nguyên
     var isAdShowing by remember { mutableStateOf(false) }
 
+    // ✅ NEW: loading dialog state cho interstitial
+    var showAdLoading by remember { mutableStateOf(false) }
+
+    // preload sẵn
     LaunchedEffect(Unit) {
         interstitialManager.preload(context)
     }
+
+    // ✅ NEW: Loading dialog (chỉ ads)
+    LoadingDialog(show = showAdLoading)
 
     // ===== SIZES =====
     val basketSize = 92.dp
@@ -166,9 +177,10 @@ fun GameScreen(
             velY = 0f
             hasNavigatedEndGame = false
 
-            // ✅ reset ads state cho game mới
+            // ✅ reset ads state cho game mới (giữ nguyên + reset loading)
             hasShownScore10Ad = false
             isAdShowing = false
+            showAdLoading = false
 
             baskets.clear()
             baskets.addAll(
@@ -319,18 +331,44 @@ fun GameScreen(
                             roundStep = min(platformCount, step + 1)
                             totalScore += 1
 
-                            // ✅ đạt đúng 10 điểm -> show interstitial 1 lần
-                            if (totalScore == totalScoreDisplayInterstitial ) {
-                                totalScoreDisplayInterstitial = totalScoreDisplayInterstitial+scoreOffSet
+                            // =========================
+                            // ✅ ADS TRIGGER (UPDATED)
+                            // =========================
+                            if (totalScore == totalScoreDisplayInterstitial) {
+                                totalScoreDisplayInterstitial += scoreOffSet
                                 hasShownScore10Ad = true
-                                if (activity != null) {
+
+                                val act = activity
+                                if (act != null) {
                                     isAdShowing = true
-                                    interstitialManager.show(activity) {
-                                        // đóng ads / fail -> resume game
-                                        isAdShowing = false
+                                    showAdLoading = true
+
+                                    // ✅ showOrQueue: nếu chưa load kịp -> loading -> load xong -> show
+                                    scope.launch {
+                                        interstitialManager.showOrQueue(
+                                            activity = act,
+                                            timeoutMs = 10_000L,
+                                            onState = { state ->
+                                                showAdLoading = (state == InterstitialAdManager.State.Loading)
+                                            },
+                                            onClosedOrFailed = {
+                                                // đóng ads / fail -> resume game
+                                                showAdLoading = false
+                                                isAdShowing = false
+                                                // preload lại cho lần sau
+                                                scope.launch { interstitialManager.preload(context) }
+                                            },
+                                            onLoadFailedOrTimeout = {
+                                                // timeout/no-fill -> resume game luôn
+                                                showAdLoading = false
+                                                isAdShowing = false
+                                                scope.launch { interstitialManager.preload(context) }
+                                            }
+                                        )
                                     }
                                 }
                             }
+                            // =========================
 
                             if (roundStep == platformCount) {
                                 startScrollDownAnimation()
@@ -359,7 +397,7 @@ fun GameScreen(
             if (gameOver) return
             if (isScrolling) return
             if (isEggFlying) return
-            if (isAdShowing) return // ✅ chặn input khi ads đang show
+            if (isAdShowing) return // ✅ chặn input khi ads đang show/loading
 
             val order = orderBottomToTop()
 
@@ -464,6 +502,33 @@ fun GameScreen(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .padding(start = 118.dp, bottom = 2.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
+ * ✅ Chỉ phục vụ phần Ads loading (không ảnh hưởng game logic)
+ */
+@Composable
+private fun LoadingDialog(show: Boolean) {
+    if (!show) return
+    androidx.compose.ui.window.Dialog(onDismissRequest = { /* block dismiss */ }) {
+        androidx.compose.material3.Surface(
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            color = Color.White
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                androidx.compose.material3.CircularProgressIndicator()
+                Text(
+                    text = "Loading ad...",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }

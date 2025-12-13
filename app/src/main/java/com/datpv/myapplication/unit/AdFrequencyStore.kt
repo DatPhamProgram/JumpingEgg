@@ -17,8 +17,8 @@ object AdFrequencyStore {
 
     private val HOME_COUNT = intPreferencesKey("home_count")
 
-    val NUMBER_DISPLAY_ADS = 5
-    val NUMBER_HOME_DISPLAY_ADS = 20
+    val NUMBER_DISPLAY_ADS = 3
+    val NUMBER_HOME_DISPLAY_ADS = 10
 
     val NUMBER_RESET = 1000
 

@@ -7,6 +7,10 @@ import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 
 class InterstitialAdManager(
@@ -16,6 +20,7 @@ class InterstitialAdManager(
     private val isLoading = AtomicBoolean(false)
 
     fun isReady(): Boolean = interstitialAd != null
+    fun isLoading(): Boolean = isLoading.get()
 
     fun preload(
         context: Context,
@@ -51,39 +56,83 @@ class InterstitialAdManager(
         )
     }
 
-    /**
-     * Show interstitial if ready, else fallback and try preload again.
-     */
-    fun show(
+    private suspend fun awaitLoaded(
+        context: Context,
+        timeoutMs: Long = 8_000L,
+        pollIntervalMs: Long = 60L
+    ): Boolean = withContext(Dispatchers.Main) {
+        if (interstitialAd != null) return@withContext true
+
+        // kick load nếu chưa load
+        if (!isLoading.get()) {
+            preload(context)
+        }
+
+        withTimeoutOrNull(timeoutMs) {
+            while (interstitialAd == null && isLoading.get()) {
+                delay(pollIntervalMs)
+            }
+            interstitialAd != null
+        } ?: false
+    }
+
+    fun showIfReady(
         activity: Activity,
         onClosedOrFailed: () -> Unit
-    ) {
-        val ad = interstitialAd
-        if (ad == null) {
-            // Chưa load xong -> coi như fail, không block UX
-            onClosedOrFailed()
-            // cố gắng load cho lần sau
-            preload(activity.applicationContext)
-            return
-        }
+    ): Boolean {
+        val ad = interstitialAd ?: return false
 
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 interstitialAd = null
+                // preload cho lần sau
+                preload(activity.applicationContext)
                 onClosedOrFailed()
             }
 
             override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
                 interstitialAd = null
+                preload(activity.applicationContext)
                 onClosedOrFailed()
             }
 
             override fun onAdShowedFullScreenContent() {
-                // đã show -> clear reference để lần sau load mới
+                // clear reference để lần sau load mới
                 interstitialAd = null
             }
         }
 
         ad.show(activity)
+        return true
+    }
+
+    enum class State { Loading, Idle }
+
+    /**
+     * ✅ Nếu chưa ready -> hiện loading (UI làm ở caller), await load xong rồi show.
+     */
+    suspend fun showOrQueue(
+        activity: Activity,
+        timeoutMs: Long = 8_000L,
+        onState: ((State) -> Unit)? = null,
+        onClosedOrFailed: () -> Unit,
+        onLoadFailedOrTimeout: () -> Unit
+    ) {
+        // ready -> show luôn
+        if (showIfReady(activity, onClosedOrFailed)) return
+
+        onState?.invoke(State.Loading)
+
+        val ok = awaitLoaded(activity.applicationContext, timeoutMs = timeoutMs)
+
+        onState?.invoke(State.Idle)
+
+        if (!ok) {
+            onLoadFailedOrTimeout()
+            return
+        }
+
+        val shown = showIfReady(activity, onClosedOrFailed)
+        if (!shown) onLoadFailedOrTimeout()
     }
 }

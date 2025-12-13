@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="doa-app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-12-17T08:28:47.086274Z">
+        <DropdownSelection timestamp="2025-12-19T19:33:28.672117Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=/Users/datpham/.android/avd/Pixel_6_Pro_API_33.avd" />
