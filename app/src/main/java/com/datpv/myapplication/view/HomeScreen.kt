@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.Alignment
@@ -40,6 +39,16 @@ fun HomeScreen(
                 .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Image(
+                painter = painterResource(id = R.drawable.top_title),
+                contentDescription = "Jumping Egg Title",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .padding(bottom = 26.dp),
+                contentScale = ContentScale.Fit
+            )
+            
             MenuButton(
                 resId = R.drawable.top_btn_01,
                 contentDescription = "Start Game",
@@ -82,6 +91,10 @@ private fun MenuButton(
     Image(
         painter = painterResource(id = resId),
         contentDescription = contentDescription,
-        modifier =  Modifier.wrapContentWidth().clickable(onClick = onClick)
+        modifier =  Modifier
+            .width(260.dp)
+            .height(64.dp)
+            .clickable(onClick = onClick)
+
     )
 }
