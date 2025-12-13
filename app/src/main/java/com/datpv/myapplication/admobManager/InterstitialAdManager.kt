@@ -2,64 +2,88 @@ package com.datpv.myapplication.admobManager
 
 import android.app.Activity
 import android.content.Context
-import android.util.Log
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
+import java.util.concurrent.atomic.AtomicBoolean
 
 class InterstitialAdManager(
     private val adUnitId: String
 ) {
-    private var ad: InterstitialAd? = null
-    private var isLoading = false
+    private var interstitialAd: InterstitialAd? = null
+    private val isLoading = AtomicBoolean(false)
 
-    fun preload(context: Context) {
-        if (ad != null || isLoading) return
-        isLoading = true
+    fun isReady(): Boolean = interstitialAd != null
 
+    fun preload(
+        context: Context,
+        onLoaded: (() -> Unit)? = null,
+        onFailed: ((LoadAdError) -> Unit)? = null
+    ) {
+        if (isLoading.get()) return
+        if (interstitialAd != null) {
+            onLoaded?.invoke()
+            return
+        }
+
+        isLoading.set(true)
+
+        val request = AdRequest.Builder().build()
         InterstitialAd.load(
             context,
             adUnitId,
-            AdRequest.Builder().build(),
+            request,
             object : InterstitialAdLoadCallback() {
-                override fun onAdLoaded(loadedAd: InterstitialAd) {
-                    isLoading = false
-                    ad = loadedAd
-                    Log.d("AdMob", "Interstitial loaded")
+                override fun onAdLoaded(ad: InterstitialAd) {
+                    interstitialAd = ad
+                    isLoading.set(false)
+                    onLoaded?.invoke()
                 }
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
-                    isLoading = false
-                    ad = null
-                    Log.e("AdMob", "Interstitial failed: ${error.code} ${error.message}")
+                    interstitialAd = null
+                    isLoading.set(false)
+                    onFailed?.invoke(error)
                 }
             }
         )
     }
 
-    fun show(activity: Activity, onClosedOrFailed: () -> Unit) {
-        val currentAd = ad
-        if (currentAd == null) {
+    /**
+     * Show interstitial if ready, else fallback and try preload again.
+     */
+    fun show(
+        activity: Activity,
+        onClosedOrFailed: () -> Unit
+    ) {
+        val ad = interstitialAd
+        if (ad == null) {
+            // Chưa load xong -> coi như fail, không block UX
             onClosedOrFailed()
+            // cố gắng load cho lần sau
+            preload(activity.applicationContext)
             return
         }
 
-        currentAd.fullScreenContentCallback = object : FullScreenContentCallback() {
+        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
-                ad = null
-                preload(activity)
+                interstitialAd = null
                 onClosedOrFailed()
             }
 
-            override fun onAdFailedToShowFullScreenContent(p0: com.google.android.gms.ads.AdError) {
-                ad = null
-                preload(activity)
+            override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
+                interstitialAd = null
                 onClosedOrFailed()
+            }
+
+            override fun onAdShowedFullScreenContent() {
+                // đã show -> clear reference để lần sau load mới
+                interstitialAd = null
             }
         }
 
-        currentAd.show(activity)
+        ad.show(activity)
     }
 }

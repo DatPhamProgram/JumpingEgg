@@ -15,11 +15,22 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.datpv.myapplication.unit.AdFrequencyStore
 import com.datpv.myapplication.view.theme.JumpingEggTheme
+import com.google.android.gms.ads.MobileAds
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        MobileAds.initialize(this)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            AdFrequencyStore.resetAllCounts(this@MainActivity)
+        }
         enableEdgeToEdge()
         setContent {
             JumpingEggTheme {
@@ -95,18 +106,3 @@ fun AppNavigation (navController: NavHostController) {
 }
 
 
-
-@Composable
-private fun SimpleStubScreen(
-    title: String,
-    onBack: () -> Unit
-) {
-    Button(
-        onClick = onBack,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp)
-    ) {
-        Text(text = "$title - Back")
-    }
-}

@@ -15,7 +15,10 @@ object AdFrequencyStore {
 
     private val RANKING_COUNT = intPreferencesKey("ranking_count")
 
+    private val HOME_COUNT = intPreferencesKey("home_count")
+
     val NUMBER_DISPLAY_ADS = 5
+    val NUMBER_HOME_DISPLAY_ADS = 20
 
     val NUMBER_RESET = 1000
 
@@ -75,4 +78,32 @@ object AdFrequencyStore {
     suspend fun resetRankingCount(context: Context) {
         context.dataStore.edit { prefs -> prefs[RANKING_COUNT] = 0 }
     }
+
+
+    //Play COUNT
+    suspend fun incrementHomeCount(context: Context) : Int {
+        context.dataStore.edit { prefs->
+            val current = prefs[HOME_COUNT] ?: 0
+            prefs[HOME_COUNT] = current + 1
+        }
+
+        return getHomeCount(context)
+    }
+
+    suspend fun getHomeCount(context: Context) : Int {
+        val prefs = context.dataStore.data.first()
+        return prefs[HOME_COUNT] ?: 0
+    }
+
+    suspend fun resetHomeCount(context: Context) {
+        context.dataStore.edit { prefs -> prefs[HOME_COUNT] = 0 }
+    }
+
+    suspend fun resetAllCounts(context: Context) {
+        resetHomeCount(context)
+        resetRankingCount(context)
+        resetDoaBackCount(context)
+        resetEndGameCount(context)
+    }
+
 }

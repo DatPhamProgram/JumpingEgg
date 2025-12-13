@@ -1,79 +1,57 @@
 package com.datpv.myapplication.view
-import android.app.Activity
-import com.datpv.myapplication.R
 
+import android.app.Activity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-
 import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.datpv.myapplication.R
 import com.datpv.myapplication.admobManager.InterstitialAdManager
 import com.datpv.myapplication.unit.AdFrequencyStore
 import kotlinx.coroutines.launch
 
-
 @Composable
 fun HomeScreen(
-    onStartGameClick:() -> Unit,
-    onRankingClick:() -> Unit,
-    onInstructionClick:() -> Unit,
-    onDoaGameClick: () ->Unit
+    onStartGameClick: () -> Unit,
+    onRankingClick: () -> Unit,
+    onInstructionClick: () -> Unit,
+    onDoaGameClick: () -> Unit
 ) {
-
     val context = LocalContext.current
     val activity = context as? Activity
 
-    // ✅ Interstitial Ad Unit ID (đặt trong strings.xml)
     val interstitialUnitId = stringResource(R.string.admob_interstitial_unit_id)
+    val adManager = remember(interstitialUnitId) { InterstitialAdManager(interstitialUnitId) }
 
-    val interstitialManager = remember(interstitialUnitId) {
-        InterstitialAdManager(interstitialUnitId)
-    }
-
-    // ✅ preload sẵn để click là show ngay
-    LaunchedEffect(Unit) {
-        interstitialManager.preload(context)
-    }
-
-
-    // ✅ chỉ show ad khi đủ 5 lần vào EndGameScreen
-    var shouldShowAd by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    var shouldShowAd by remember { mutableStateOf(false) }
+    var isStartProcessing by remember { mutableStateOf(false) } // ✅ chặn double click
+
+    // ✅ Chỉ preload + tính shouldShowAd (KHÔNG auto show)
     LaunchedEffect(Unit) {
-        val count = AdFrequencyStore.incrementRankingCount(context)
-        shouldShowAd = (count % 5 == 0)
+        adManager.preload(context)
 
-        if(count == 1) {
-            shouldShowAd = true
-        }
+        val count = AdFrequencyStore.incrementHomeCount(context)
+        shouldShowAd = (count % AdFrequencyStore.NUMBER_HOME_DISPLAY_ADS == 0)
 
-        if (count == AdFrequencyStore.NUMBER_RESET){
-            AdFrequencyStore.resetRankingCount(context)
+        if (count >= AdFrequencyStore.NUMBER_RESET) {
+            AdFrequencyStore.resetHomeCount(context)
         }
     }
 
-    Box(
-        modifier =  Modifier.fillMaxSize()
-    ){
+    Box(modifier = Modifier.fillMaxSize()) {
+
         Image(
             painter = painterResource(id = R.drawable.background),
-            contentDescription =  null,
+            contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
         )
@@ -89,7 +67,7 @@ fun HomeScreen(
             modifier = Modifier
                 .align(Alignment.Center)
                 .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
                 painter = painterResource(id = R.drawable.top_title),
@@ -100,11 +78,31 @@ fun HomeScreen(
                     .padding(bottom = 26.dp),
                 contentScale = ContentScale.Fit
             )
-            
+
+            // ✅ Start Game: nếu shouldShowAd -> show ads rồi mới vào game
             MenuButton(
                 resId = R.drawable.top_btn_01,
                 contentDescription = "Start Game",
-                onClick = onStartGameClick
+                onClick = {
+                    if (isStartProcessing) return@MenuButton
+                    isStartProcessing = true
+
+                    val act = activity
+                    if (!shouldShowAd || act == null) {
+                        isStartProcessing = false
+                        onStartGameClick()
+                        return@MenuButton
+                    }
+
+                    adManager.show(
+                        activity = act,
+                        onClosedOrFailed = {
+                            scope.launch { adManager.preload(context) }
+                            isStartProcessing = false
+                            onStartGameClick()
+                        }
+                    )
+                }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -112,20 +110,7 @@ fun HomeScreen(
             MenuButton(
                 resId = R.drawable.top_btn_02,
                 contentDescription = "Ranking",
-                onClick = {
-                    if (!shouldShowAd || activity == null) {
-                        onRankingClick()
-                        return@MenuButton
-                    }
-
-                    interstitialManager.show(activity) {
-                        // (tuỳ bạn) sau khi show thì preload lại
-                        scope.launch { interstitialManager.preload(context) }
-
-                        // đóng ads hoặc fail -> đi ranking
-                        onRankingClick()
-                    }
-                }
+                onClick = onRankingClick
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -151,15 +136,14 @@ fun HomeScreen(
 private fun MenuButton(
     resId: Int,
     contentDescription: String,
-    onClick:() -> Unit
+    onClick: () -> Unit
 ) {
     Image(
         painter = painterResource(id = resId),
         contentDescription = contentDescription,
-        modifier =  Modifier
+        modifier = Modifier
             .width(260.dp)
             .height(64.dp)
             .clickable(onClick = onClick)
-
     )
 }

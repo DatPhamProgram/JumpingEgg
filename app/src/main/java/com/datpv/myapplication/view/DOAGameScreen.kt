@@ -31,7 +31,6 @@ fun DOAGameScreen(
     onBack: () -> Unit
 ) {
 
-
     val context = LocalContext.current
     val activity = context as? Activity
 
@@ -48,19 +47,17 @@ fun DOAGameScreen(
     var shouldShowAd by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit)
-    {
+    LaunchedEffect(Unit) {
         val count = AdFrequencyStore.incrementDoaBackCount(context)
-        shouldShowAd = (count % AdFrequencyStore.NUMBER_DISPLAY_ADS == 0)
 
-        if(count == 1) {
-            shouldShowAd = true
-        }
+        shouldShowAd =
+            count == 1 || count % AdFrequencyStore.NUMBER_DISPLAY_ADS == 0
 
-        if (count == AdFrequencyStore.NUMBER_RESET){
+        if (count >= AdFrequencyStore.NUMBER_RESET) {
             AdFrequencyStore.resetDoaBackCount(context)
         }
     }
+
 
     Box(modifier = Modifier.fillMaxSize()) {
 
