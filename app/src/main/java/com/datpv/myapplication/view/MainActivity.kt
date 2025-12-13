@@ -86,7 +86,9 @@ fun AppNavigation (navController: NavHostController) {
 
         }
         composable("doa") {
-            SimpleStubScreen("D.O.A Game Screen") { navController.popBackStack() }
+           DOAGameScreen (
+               onBack = {navController.popBackStack()}
+           )
         }
 
     }
