@@ -52,6 +52,8 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.material3)
     implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.benchmark.traceprocessor)
     debugImplementation(libs.androidx.ui.tooling)
 
     // Navigation Compose

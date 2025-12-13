@@ -36,7 +36,9 @@ private data class Basket(
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
-fun GameScreen(onBack: () -> Unit) {
+fun GameScreen(
+    onGameOver: (finalScore: Int) -> Unit
+) {
 
     // ===== SIZES =====
     val basketSize = 92.dp
@@ -118,6 +120,7 @@ fun GameScreen(onBack: () -> Unit) {
         // Game over
         var gameOver by remember { mutableStateOf(false) }
         var finalScore by remember { mutableStateOf(0) }
+        var hasNavigatedEndGame by remember { mutableStateOf(false) }
 
         // ===== helpers =====
         fun orderBottomToTop(): List<Int> =
@@ -145,6 +148,8 @@ fun GameScreen(onBack: () -> Unit) {
             isEggFlying = false
             basketWithEgg = -1
             velY = 0f
+            hasNavigatedEndGame = false
+
 
             baskets.clear()
             baskets.addAll(
@@ -414,27 +419,16 @@ fun GameScreen(onBack: () -> Unit) {
                 )
             }
 
-            Button(
-                onClick = onBack,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(16.dp)
-            ) { Text("Back", fontSize = 14.sp) }
-
-            // Game Over dialog
-            if (gameOver) {
-                AlertDialog(
-                    onDismissRequest = { },
-                    title = { Text("Game Over") },
-                    text = { Text("Your score: $finalScore") },
-                    confirmButton = {
-                        TextButton(onClick = { resetGame() }) { Text("Play Again") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = onBack) { Text("Back") }
-                    }
-                )
-            }
+           if (gameOver) {
+               finalScore = totalScore
+               gameOver = true
+               isEggFlying = false
+               velY = 0f
+               if (!hasNavigatedEndGame) {
+                   hasNavigatedEndGame = true
+                   onGameOver(totalScore)
+               }
+           }
 
             // Banner score (✅ totalScore không reset khi scroll)
             Box(

@@ -55,20 +55,44 @@ fun AppNavigation (navController: NavHostController) {
         }
         composable("game") {
             GameScreen (
-                onBack = {
-                    navController.popBackStack()
+                onGameOver = { finalScore ->
+                    navController.navigate("endGame/$finalScore") {
+                        // optional: remove game khỏi backstack để khỏi quay lại game đang chạy
+                        popUpTo("game") { inclusive = true }
+                    }
                 }
             )
-
         }
+
+        composable("endgame/{score}") { backStackEntry ->
+            val score = backStackEntry.arguments?.getString("score")?.toIntOrNull() ?: 0
+            EndGameScreen(
+                score = score,
+                onPlayAgain = {
+                    navController.navigate("game")
+                    {
+                        popUpTo("home")
+                    }
+                              },
+                onBackHome = { navController.popBackStack("home", false) }
+            )
+        }
+
+
         composable("ranking") {
-            SimpleStubScreen("Ranking Screen") { navController.popBackStack() }
+            RankingScreen(
+                onBack = { navController.popBackStack() }
+            )
+
         }
         composable("doa") {
             SimpleStubScreen("D.O.A Game Screen") { navController.popBackStack() }
         }
+
     }
 }
+
+
 
 @Composable
 private fun SimpleStubScreen(

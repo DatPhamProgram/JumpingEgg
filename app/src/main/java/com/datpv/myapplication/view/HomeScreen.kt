@@ -21,8 +21,7 @@ fun HomeScreen(
     onStartGameClick:() -> Unit,
     onRankingClick:() -> Unit,
     onInstructionClick:() -> Unit,
-    onDoaGameClick: () ->Unit,
-    viewModel: HomeViewModel = viewModel()
+    onDoaGameClick: () ->Unit
 ) {
 
     Box(
