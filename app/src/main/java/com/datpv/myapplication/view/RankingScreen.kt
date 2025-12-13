@@ -13,9 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.datpv.myapplication.R
@@ -44,6 +46,13 @@ fun RankingScreen(
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
+        )
+
+        BannerAdTop(
+            adUnitId = stringResource(R.string.admob_unit_id),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 12.dp)
         )
 
         // ✅ LIST nằm đúng “khung trắng trên”
@@ -95,9 +104,11 @@ fun RankingScreen(
             contentDescription = "Back",
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding( bottom = 100.dp)
+                .padding(bottom = 100.dp)
                 .size(64.dp)
+                .zIndex(999f)
                 .clickable { onBack() }
         )
+
     }
 }

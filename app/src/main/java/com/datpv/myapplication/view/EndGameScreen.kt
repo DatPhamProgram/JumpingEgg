@@ -1,5 +1,6 @@
 package com.datpv.myapplication.view
 
+import android.app.Activity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,16 +12,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.datpv.myapplication.R
+import com.datpv.myapplication.admobManager.RewardedInterstitialAdManager
 
 
 @Composable
@@ -34,6 +39,20 @@ fun EndGameScreen(
         vm.saveScore(score)
     }
 
+    val context = LocalContext.current
+    val activity = context as? Activity
+
+    val rewardedInterstitialUnitId = stringResource(R.string.admob_rewarded_unit_id)
+
+    val adManager = remember(rewardedInterstitialUnitId) {
+        RewardedInterstitialAdManager(rewardedInterstitialUnitId)
+    }
+
+    LaunchedEffect(Unit) {
+        adManager.preload(context)
+    }
+
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -44,6 +63,13 @@ fun EndGameScreen(
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
+        )
+
+        BannerAdTop(
+            adUnitId = stringResource(R.string.admob_unit_id),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 12.dp)
         )
 
         // ===== SCORE CENTER (giữa khung trắng) =====
@@ -82,7 +108,24 @@ fun EndGameScreen(
                 contentDescription = "Play Again",
                 modifier = Modifier
                     .size(width = 200.dp, height = 64.dp)
-                    .clickable { onPlayAgain() }
+                    .clickable {
+
+                        if(activity == null) {
+                            onPlayAgain()
+                            return@clickable
+                        }
+                        adManager.show(
+                            activity = activity,
+                            onRewardEarned = {
+                                // ✅ Xem xong + được reward -> vào game
+                                onPlayAgain()
+                            },
+                            onClosedOrFailed = {
+                                // ✅ User đóng/ads fail -> vẫn vào game (đỡ kẹt UX)
+                                onPlayAgain()
+                            }
+                        )
+                    }
             )
 
             // Back Home

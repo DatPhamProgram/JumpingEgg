@@ -13,7 +13,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.datpv.myapplication"
+        applicationId = "com.datpv.doa.jumpingegg"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -72,6 +72,7 @@ dependencies {
     // WorkManager (sẽ dùng sau cho analytics)
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
+    implementation("com.google.android.gms:play-services-ads:23.0.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
