@@ -12,13 +12,19 @@ import androidx.compose.ui.res.painterResource
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.datpv.myapplication.admobManager.InterstitialAdManager
+import com.datpv.myapplication.unit.AdFrequencyStore
+import kotlinx.coroutines.launch
 
 
 @Composable
@@ -42,6 +48,24 @@ fun HomeScreen(
     // ✅ preload sẵn để click là show ngay
     LaunchedEffect(Unit) {
         interstitialManager.preload(context)
+    }
+
+
+    // ✅ chỉ show ad khi đủ 5 lần vào EndGameScreen
+    var shouldShowAd by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        val count = AdFrequencyStore.incrementRankingCount(context)
+        shouldShowAd = (count % 5 == 0)
+
+        if(count == 1) {
+            shouldShowAd = true
+        }
+
+        if (count == AdFrequencyStore.NUMBER_RESET){
+            AdFrequencyStore.resetRankingCount(context)
+        }
     }
 
     Box(
@@ -89,12 +113,15 @@ fun HomeScreen(
                 resId = R.drawable.top_btn_02,
                 contentDescription = "Ranking",
                 onClick = {
-                    if (activity == null) {
+                    if (!shouldShowAd || activity == null) {
                         onRankingClick()
                         return@MenuButton
                     }
 
                     interstitialManager.show(activity) {
+                        // (tuỳ bạn) sau khi show thì preload lại
+                        scope.launch { interstitialManager.preload(context) }
+
                         // đóng ads hoặc fail -> đi ranking
                         onRankingClick()
                     }

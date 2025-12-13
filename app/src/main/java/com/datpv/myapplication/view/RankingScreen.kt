@@ -1,5 +1,6 @@
 package com.datpv.myapplication.view
 
+import android.R.attr.end
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +22,11 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.datpv.myapplication.R
+import androidx.compose.ui.text.style.TextAlign
+
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.text.style.TextOverflow
 
 
 @Composable
@@ -36,9 +42,9 @@ fun RankingScreen(
 
         // ✅ các “tỉ lệ” để canh nội dung vào khung trắng phía trên (ăn theo mọi màn hình)
         val contentLeft = w * 0.14f
-        val contentTop = h * 0.20f       // bắt đầu dưới chữ Ranking
+        val contentTop = h * 0.05f       // bắt đầu dưới chữ Ranking
         val contentWidth = w * 0.72f
-        val contentHeight = h * 0.34f    // nằm gọn trong khung trắng trên
+        val contentHeight = h * 0.48f    // nằm gọn trong khung trắng trên
 
         // Background
         Image(
@@ -56,47 +62,70 @@ fun RankingScreen(
         )
 
         // ✅ LIST nằm đúng “khung trắng trên”
+        // ✅ LIST nằm đúng “khung trắng trên”
         Box(
             modifier = Modifier
-                .offset(x = contentLeft, y = contentTop)
-                .size(contentWidth, contentHeight)
-                .padding(horizontal = 10.dp, vertical = 100.dp)
+                .offset(x = contentLeft, y = h * 0.26f)   // 🔥 đẩy xuống thêm (0.24f - 0.30f tuỳ máy)
+                .size(contentWidth, h * 0.40f)            // 🔥 chiều cao hợp lý cho 5 dòng
+                .padding(horizontal = 10.dp)
+                .clipToBounds()                           // 🔥 QUAN TRỌNG: chặn vẽ tràn ra ngoài
         ) {
-            if (top5.isEmpty()) {
-                Text(
-                    text = "No scores yet",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF6D4C41)
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    itemsIndexed(top5) { index, item ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "${index + 1}:",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF8D2C1F), // đỏ nâu giống hình
-                                modifier = Modifier.width(44.dp)
-                            )
-                            Text(
-                                text = item.toString(),
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF1B2A8A) // xanh giống hình
-                            )
-                        }
+            // ✅ luôn đủ 5 rows giống hình
+            val rows = List(5) { idx -> top5.getOrNull(idx) ?: 0 }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = contentTop, bottom = contentHeight),
+                verticalArrangement = Arrangement.spacedBy(18.dp)
+            ) {
+                itemsIndexed(rows) { index, score ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 4.dp, end = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Text(
+                            text = "${index + 1}.",
+                            fontSize = 42.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFF8D2C1F),
+                            modifier = Modifier.width(48.dp),
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Clip,
+                            textAlign = TextAlign.Start
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))   // khoảng cách giữa col1-col2
+                        Text(
+                            text = score.toString(),
+                            fontSize = 42.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFFFB300),
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Clip,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))   // khoảng cách giữa col2-col3
+                        Text(
+                            text = "Point",
+                            fontSize = 42.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFFFB300),
+                            modifier = Modifier.width(120.dp),
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Clip,
+                            textAlign = TextAlign.End
+                        )
                     }
                 }
             }
         }
+
 
         // ✅ Back button: góc trên phải
         Image(

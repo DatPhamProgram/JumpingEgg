@@ -46,8 +46,8 @@ fun GameScreen(
     // =========================
     val context = LocalContext.current
     val activity = context as? Activity
-    var totalScoreDisplayInterstitial = 10
-    val scoreOffSet = 10
+    var totalScoreDisplayInterstitial = 50
+    val scoreOffSet = 50
     val interstitialUnitId = stringResource(R.string.admob_interstitial_unit_id)
     val interstitialManager = remember(interstitialUnitId) { InterstitialAdManager(interstitialUnitId) }
 

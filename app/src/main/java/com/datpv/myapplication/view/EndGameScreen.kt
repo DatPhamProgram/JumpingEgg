@@ -12,7 +12,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,6 +30,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.datpv.myapplication.R
 import com.datpv.myapplication.admobManager.RewardedInterstitialAdManager
+import com.datpv.myapplication.unit.AdFrequencyStore
+import kotlinx.coroutines.launch
 
 
 @Composable
@@ -52,6 +58,22 @@ fun EndGameScreen(
         adManager.preload(context)
     }
 
+    var shouldShowAd by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit)
+    {
+        val count = AdFrequencyStore.incrementEndGameCount(context)
+        shouldShowAd = (count % AdFrequencyStore.NUMBER_DISPLAY_ADS == 0)
+
+        if(count == 1) {
+            shouldShowAd = true
+        }
+
+        if (count == AdFrequencyStore.NUMBER_RESET){
+            AdFrequencyStore.resetEndGameCount(context)
+        }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -110,17 +132,21 @@ fun EndGameScreen(
                     .size(width = 200.dp, height = 64.dp)
                     .clickable {
 
-                        if(activity == null) {
+                        if(!shouldShowAd || activity == null) {
                             onPlayAgain()
                             return@clickable
                         }
                         adManager.show(
                             activity = activity,
                             onRewardEarned = {
+                                // (tuỳ bạn) sau khi show thì preload lại
+                                scope.launch { adManager.preload(context) }
                                 // ✅ Xem xong + được reward -> vào game
                                 onPlayAgain()
                             },
                             onClosedOrFailed = {
+                                // (tuỳ bạn) sau khi show thì preload lại
+                                scope.launch { adManager.preload(context) }
                                 // ✅ User đóng/ads fail -> vẫn vào game (đỡ kẹt UX)
                                 onPlayAgain()
                             }

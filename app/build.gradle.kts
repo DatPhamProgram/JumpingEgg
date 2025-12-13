@@ -16,8 +16,8 @@ android {
         applicationId = "com.datpv.doa.jumpingegg"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.0.5"
+        versionCode = 6
+        versionName = "1.0.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -71,6 +71,9 @@ dependencies {
 
     // WorkManager (sẽ dùng sau cho analytics)
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
 
     implementation("com.google.android.gms:play-services-ads:23.0.0")
     implementation(libs.androidx.core.ktx)

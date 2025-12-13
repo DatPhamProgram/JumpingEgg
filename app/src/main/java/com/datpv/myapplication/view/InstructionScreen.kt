@@ -102,7 +102,7 @@ fun InstructionScreen (
                 onClick = onBack,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .padding(bottom = 8.dp)
+                    .padding(bottom = 200.dp)
             ) {
                 Text(text = "Back")
             }
