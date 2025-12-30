@@ -5,15 +5,15 @@
     <string name="title_activity_game">GameActivity</string>
     <string name="title_activity_doa_game">DoaGameActivity</string>
     <!--Test Admob-->
-    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
-    <string name="admob_unit_id">ca-app-pub-3940256099942544/6300978111</string>
-    <string name="admob_rewarded_unit_id">ca-app-pub-3940256099942544/5354046379</string>
-    <string name="admob_interstitial_unit_id">ca-app-pub-3940256099942544/1033173712</string>
+<!--    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>-->
+<!--    <string name="admob_unit_id">ca-app-pub-3940256099942544/6300978111</string>-->
+<!--    <string name="admob_rewarded_unit_id">ca-app-pub-3940256099942544/5354046379</string>-->
+<!--    <string name="admob_interstitial_unit_id">ca-app-pub-3940256099942544/1033173712</string>-->
     <!--Real Admob-->
-<!--    <string name="admob_app_id">ca-app-pub-2091512074786628~3699744226</string>-->
-<!--    <string name="admob_unit_id">ca-app-pub-2091512074786628/8102023662</string>-->
-<!--    <string name="admob_rewarded_unit_id">ca-app-pub-2091512074786628/4274652810</string>-->
-<!--    <string name="admob_interstitial_unit_id">ca-app-pub-2091512074786628/5396162794</string>-->
+    <string name="admob_app_id">ca-app-pub-2091512074786628~3699744226</string>
+    <string name="admob_unit_id">ca-app-pub-2091512074786628/8102023662</string>
+    <string name="admob_rewarded_unit_id">ca-app-pub-2091512074786628/4274652810</string>
+    <string name="admob_interstitial_unit_id">ca-app-pub-2091512074786628/5396162794</string>
 
 
 </resources>

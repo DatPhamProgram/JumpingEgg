@@ -3,14 +3,19 @@ package com.datpv.myapplication.view
 import android.app.Activity
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,16 +29,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.datpv.myapplication.R
 import com.datpv.myapplication.admobManager.InterstitialAdManager
 import com.datpv.myapplication.unit.AdFrequencyStore
 import kotlinx.coroutines.launch
 
+/**
+ * Runtime screen: có Ads + preload + frequency.
+ * Preview sẽ KHÔNG gọi function này, mà gọi HomeContent().
+ */
 @Composable
 fun HomeScreen(
     onStartGameClick: () -> Unit,
@@ -43,6 +55,20 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
+    val isInPreview = LocalInspectionMode.current
+
+    // Nếu đang preview: skip toàn bộ ads logic để tránh crash / treo preview
+    if (isInPreview) {
+        HomeContent(
+            onStartGameClick = onStartGameClick,
+            onRankingClick = onRankingClick,
+            onInstructionClick = onInstructionClick,
+            onDoaGameClick = onDoaGameClick,
+            showLoading = false,
+            showBannerAd = false
+        )
+        return
+    }
 
     val interstitialUnitId = stringResource(R.string.admob_interstitial_unit_id)
     val adManager = remember(interstitialUnitId) { InterstitialAdManager(interstitialUnitId) }
@@ -52,8 +78,6 @@ fun HomeScreen(
     var shouldShowAd by remember { mutableStateOf(false) }
     var isStartProcessing by remember { mutableStateOf(false) } // chặn double click
     var showLoading by remember { mutableStateOf(false) }       // dialog loading
-
-    LoadingDialog(show = showLoading)
 
     // Preload + tính frequency
     LaunchedEffect(Unit) {
@@ -103,6 +127,31 @@ fun HomeScreen(
         }
     }
 
+    HomeContent(
+        onStartGameClick = { requireInterstitialThen { onStartGameClick() } },
+        onRankingClick = onRankingClick,
+        onInstructionClick = onInstructionClick,
+        onDoaGameClick = onDoaGameClick,
+        showLoading = showLoading,
+        showBannerAd = true
+    )
+}
+
+/**
+ * UI thuần: chỉ vẽ giao diện.
+ * Đây là cái nên dùng cho Preview (giống XML preview).
+ */
+@Composable
+private fun HomeContent(
+    onStartGameClick: () -> Unit,
+    onRankingClick: () -> Unit,
+    onInstructionClick: () -> Unit,
+    onDoaGameClick: () -> Unit,
+    showLoading: Boolean,
+    showBannerAd: Boolean
+) {
+    LoadingDialog(show = showLoading)
+
     Box(modifier = Modifier.fillMaxSize()) {
 
         Image(
@@ -112,12 +161,14 @@ fun HomeScreen(
             contentScale = ContentScale.Crop
         )
 
-        BannerAdTop(
-            adUnitId = stringResource(R.string.admob_unit_id),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 12.dp)
-        )
+        if (showBannerAd) {
+            BannerAdTop(
+                adUnitId = stringResource(R.string.admob_unit_id),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 12.dp)
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -135,11 +186,10 @@ fun HomeScreen(
                 contentScale = ContentScale.Fit
             )
 
-            // ✅ Start Game: show interstitial (nếu cần) rồi mới vào game
             MenuButton(
                 resId = R.drawable.top_btn_01,
                 contentDescription = "Start Game",
-                onClick = { requireInterstitialThen { onStartGameClick() } }
+                onClick = onStartGameClick
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -181,24 +231,26 @@ private fun MenuButton(
         modifier = Modifier
             .width(260.dp)
             .height(64.dp)
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
+        contentScale = ContentScale.FillBounds
     )
 }
 
 @Composable
 private fun LoadingDialog(show: Boolean) {
     if (!show) return
-    androidx.compose.ui.window.Dialog(onDismissRequest = { /* block dismiss */ }) {
-        androidx.compose.material3.Surface(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+
+    Dialog(onDismissRequest = { /* block dismiss */ }) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
             color = Color.White
         ) {
-            androidx.compose.foundation.layout.Row(
+            Row(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                androidx.compose.material3.CircularProgressIndicator()
+                CircularProgressIndicator()
                 Text(
                     text = "Loading ad...",
                     fontSize = 16.sp,
@@ -208,3 +260,30 @@ private fun LoadingDialog(show: Boolean) {
         }
     }
 }
+
+/**
+ * Preview giống XML:
+ * - gọi HomeContent UI thuần
+ * - showSystemUi = true để nhìn như màn hình thật
+ */
+@Preview(showBackground = true, showSystemUi = true, name = "Home - Light")
+@Composable
+fun HomePreview() {
+    HomeContent(
+        onStartGameClick = {},
+        onRankingClick = {},
+        onInstructionClick = {},
+        onDoaGameClick = {},
+        showLoading = false,
+        showBannerAd = false
+    )
+}
+
+/**
+ * (Optional) Dark preview
+ */
+// @Preview(showBackground = true, showSystemUi = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES, name = "Home - Dark")
+// @Composable
+// fun HomePreviewDark() {
+//     HomePreview()
+// }

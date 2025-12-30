@@ -16,8 +16,8 @@ android {
         applicationId = "com.datpv.doa.jumpingegg"
         minSdk = 24
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.0.8"
+        versionCode = 10
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -56,7 +56,12 @@ dependencies {
     implementation(libs.androidx.benchmark.traceprocessor)
     implementation(libs.ui)
     debugImplementation(libs.androidx.ui.tooling)
+    implementation(platform("androidx.compose:compose-bom:..."))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
 
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
     // Navigation Compose
     implementation(libs.androidx.navigation.compose)
 
