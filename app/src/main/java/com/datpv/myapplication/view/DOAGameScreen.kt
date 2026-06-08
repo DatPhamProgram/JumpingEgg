@@ -12,19 +12,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.datpv.myapplication.R
+import com.datpv.myapplication.admobManager.InterstitialAdManager
 import com.datpv.myapplication.admobManager.RewardedInterstitialAdManager
-import com.datpv.myapplication.unit.AdFrequencyStore
+import com.datpv.myapplication.util.AdFrequencyStore
+import com.datpv.myapplication.viewmodel.DOAGameViewModel
 import kotlinx.coroutines.launch
 
 @Composable
@@ -40,70 +38,56 @@ fun DOAGameScreen(
         RewardedInterstitialAdManager(rewardedInterstitialUnitId)
     }
 
-    var shouldShowAd by remember { mutableStateOf(false) }
-
-    // ✅ chặn double click (NHƯNG sẽ reset khi quay lại screen)
-    var isBlocking by remember { mutableStateOf(false) } // chặn thao tác + hiện loading
     val scope = rememberCoroutineScope()
+    val vm = remember { DOAGameViewModel() }
 
-    LoadingDialog(show = isBlocking)
+    // =========================
+    // ✅ ADS: Interstitial khi mở màn hình (mỗi 3 lần mở)
+    // =========================
+    val interstitialUnitId = stringResource(R.string.admob_interstitial_unit_id)
+    val interstitialManager = remember(interstitialUnitId) {
+        InterstitialAdManager(interstitialUnitId)
+    }
+    var isOpenAdShowing by remember { mutableStateOf(false) }
+    var isOpenAdLoading by remember { mutableStateOf(false) }
+
+    LoadingDialog(show = vm.isBlocking || isOpenAdLoading)
 
     LaunchedEffect(Unit) {
-        val count = AdFrequencyStore.incrementDoaBackCount(context)
-        shouldShowAd = (count % AdFrequencyStore.NUMBER_DISPLAY_ADS == 0)
+        vm.loadShouldShowAd(context)
 
-        if (count == 1) shouldShowAd = true
+        interstitialManager.preload(context)
 
-        if (count == AdFrequencyStore.NUMBER_RESET) {
-            AdFrequencyStore.resetDoaBackCount(context)
-        }
-    }
+        val act = activity
+        if (act != null &&
+            AdFrequencyStore.decideShowAd(context, AdFrequencyStore.AdSurface.DOA_OPEN)
+        ) {
+            isOpenAdShowing = true
+            isOpenAdLoading = true
 
-
-    // Chặn system back khi cần bắt xem ad hoặc đang loading
-    BackHandler(enabled = shouldShowAd || isBlocking) {
-        // Không làm gì -> user không thoát lách bằng back hệ thống
-    }
-
-    fun requireAdThen(action: () -> Unit) {
-
-        // Nếu không cần show ad hoặc không có activity => chạy luôn
-        if (!shouldShowAd || activity == null) {
-            action()
-            return
-        }
-
-        // Nếu đang chạy flow ads rồi thì bỏ qua click spam
-        if (isBlocking) return
-
-        scope.launch {
-            isBlocking = true
-
-            // Đợi load xong rồi show (timeout tùy bạn)
-            adManager.showOrQueue(
-                activity = activity,
-                timeoutMs = 12_000L,
+            interstitialManager.showOrQueue(
+                activity = act,
+                timeoutMs = 10_000L,
                 onState = { state ->
-                    isBlocking = (state == RewardedInterstitialAdManager.State.Loading)
-                },
-                onRewardEarned = {
-                    isBlocking = false
-                    action()
+                    isOpenAdLoading = (state == InterstitialAdManager.State.Loading)
                 },
                 onClosedOrFailed = {
-                    // Ad đã hiển thị và user đóng (hoặc show fail) -> cho đi tiếp
-                    isBlocking = false
-                    action()
+                    isOpenAdLoading = false
+                    isOpenAdShowing = false
+                    scope.launch { interstitialManager.preload(context) }
                 },
                 onLoadFailedOrTimeout = {
-                    // Bạn nói "bắt buộc": nếu muốn cứng hơn, bạn có thể retry ở đây.
-                    // Nhưng nếu no-fill/mất mạng mà hard-block vô hạn sẽ kẹt app.
-                    // Mình chọn fallback để không kẹt:
-                    isBlocking = false
-                    action()
+                    isOpenAdLoading = false
+                    isOpenAdShowing = false
+                    scope.launch { interstitialManager.preload(context) }
                 }
             )
         }
+    }
+
+    // Chặn system back khi cần bắt xem ad hoặc đang loading
+    BackHandler(enabled = vm.shouldShowAd || vm.isBlocking || isOpenAdShowing) {
+        // Không làm gì -> user không thoát lách bằng back hệ thống
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -129,7 +113,7 @@ fun DOAGameScreen(
         // ✅ Back Button (GIỐNG ban đầu)
         Button(
             onClick = {
-              requireAdThen { onBack.invoke() }
+                vm.requireAdThen(scope, activity, adManager, context) { onBack() }
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)

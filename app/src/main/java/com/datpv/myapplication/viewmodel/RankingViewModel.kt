@@ -1,9 +1,9 @@
-package com.datpv.myapplication.view
+package com.datpv.myapplication.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.datpv.myapplication.database.AppDatabase
+import com.datpv.myapplication.model.AppDatabase
 import com.datpv.myapplication.repository.ScoreRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

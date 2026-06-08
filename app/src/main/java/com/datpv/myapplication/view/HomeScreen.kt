@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.datpv.myapplication.R
 import com.datpv.myapplication.admobManager.InterstitialAdManager
-import com.datpv.myapplication.unit.AdFrequencyStore
+import com.datpv.myapplication.util.AdFrequencyStore
 import kotlinx.coroutines.launch
 
 /**
@@ -79,16 +79,10 @@ fun HomeScreen(
     var isStartProcessing by remember { mutableStateOf(false) } // chặn double click
     var showLoading by remember { mutableStateOf(false) }       // dialog loading
 
-    // Preload + tính frequency
+    // Preload + tính frequency (tập trung trong AdFrequencyStore.decideShowAd)
     LaunchedEffect(Unit) {
         adManager.preload(context)
-
-        val count = AdFrequencyStore.incrementHomeCount(context)
-        shouldShowAd = (count % AdFrequencyStore.NUMBER_HOME_DISPLAY_ADS == 0)
-
-        if (count >= AdFrequencyStore.NUMBER_RESET) {
-            AdFrequencyStore.resetHomeCount(context)
-        }
+        shouldShowAd = AdFrequencyStore.decideShowAd(context, AdFrequencyStore.AdSurface.HOME)
     }
 
     fun requireInterstitialThen(action: () -> Unit) {

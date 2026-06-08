@@ -30,8 +30,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.datpv.myapplication.R
+import com.datpv.myapplication.admobManager.InterstitialAdManager
 import com.datpv.myapplication.admobManager.RewardedInterstitialAdManager
-import com.datpv.myapplication.unit.AdFrequencyStore
+import com.datpv.myapplication.util.AdFrequencyStore
+import com.datpv.myapplication.viewmodel.RankingViewModel
 import kotlinx.coroutines.launch
 
 @Composable
@@ -58,22 +60,55 @@ fun EndGameScreen(
     var isBlocking by remember { mutableStateOf(false) } // chặn thao tác + hiện loading
     val scope = rememberCoroutineScope()
 
-    LoadingDialog(show = isBlocking)
+    // =========================
+    // ✅ ADS: Interstitial ngay khi game kết thúc (vào màn hình này)
+    // =========================
+    val interstitialUnitId = stringResource(R.string.admob_interstitial_unit_id)
+    val interstitialManager = remember(interstitialUnitId) {
+        InterstitialAdManager(interstitialUnitId)
+    }
+    var isGameOverAdShowing by remember { mutableStateOf(false) }
+    var isGameOverAdLoading by remember { mutableStateOf(false) }
 
-    // Tính frequency
     LaunchedEffect(Unit) {
-        val count = AdFrequencyStore.incrementEndGameCount(context)
-        shouldShowAd = (count % AdFrequencyStore.NUMBER_DISPLAY_ADS == 0)
+        interstitialManager.preload(context)
 
-        if (count == 1) shouldShowAd = true
+        val act = activity
+        if (act != null &&
+            AdFrequencyStore.decideShowAd(context, AdFrequencyStore.AdSurface.GAME_OVER)
+        ) {
+            isGameOverAdShowing = true
+            isGameOverAdLoading = true
 
-        if (count == AdFrequencyStore.NUMBER_RESET) {
-            AdFrequencyStore.resetEndGameCount(context)
+            interstitialManager.showOrQueue(
+                activity = act,
+                timeoutMs = 10_000L,
+                onState = { state ->
+                    isGameOverAdLoading = (state == InterstitialAdManager.State.Loading)
+                },
+                onClosedOrFailed = {
+                    isGameOverAdLoading = false
+                    isGameOverAdShowing = false
+                    scope.launch { interstitialManager.preload(context) }
+                },
+                onLoadFailedOrTimeout = {
+                    isGameOverAdLoading = false
+                    isGameOverAdShowing = false
+                    scope.launch { interstitialManager.preload(context) }
+                }
+            )
         }
     }
 
+    LoadingDialog(show = isBlocking || isGameOverAdLoading)
+
+    // Tính frequency (tập trung trong AdFrequencyStore.decideShowAd)
+    LaunchedEffect(Unit) {
+        shouldShowAd = AdFrequencyStore.decideShowAd(context, AdFrequencyStore.AdSurface.END_GAME)
+    }
+
     // Chặn system back khi cần bắt xem ad hoặc đang loading
-    BackHandler(enabled = shouldShowAd || isBlocking) {
+    BackHandler(enabled = shouldShowAd || isBlocking || isGameOverAdShowing) {
         // Không làm gì -> user không thoát lách bằng back hệ thống
     }
 

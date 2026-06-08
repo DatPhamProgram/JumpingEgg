@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -15,7 +17,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.datpv.myapplication.unit.AdFrequencyStore
+import com.datpv.myapplication.util.AdFrequencyStore
 import com.datpv.myapplication.view.theme.JumpingEggTheme
 import com.google.android.gms.ads.MobileAds
 import kotlinx.coroutines.CoroutineScope
@@ -46,7 +48,13 @@ fun AppNavigation (navController: NavHostController) {
 
     NavHost(
         navController = navController,
-        startDestination = "home"
+        startDestination = "home",
+        // Tắt animation crossfade mặc định: tránh hiện tượng 2 màn hình
+        // chồng lên nhau lúc chuyển màn (gây cảm giác "màn hình trắng" nháy qua)
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
     ){
         composable ("home") {
             HomeScreen(

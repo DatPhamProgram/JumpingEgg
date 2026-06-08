@@ -2,6 +2,7 @@ package com.datpv.myapplication.admobManager
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
@@ -44,12 +45,14 @@ class InterstitialAdManager(
                 override fun onAdLoaded(ad: InterstitialAd) {
                     interstitialAd = ad
                     isLoading.set(false)
+                    Log.d(TAG, "Interstitial loaded ($adUnitId)")
                     onLoaded?.invoke()
                 }
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     interstitialAd = null
                     isLoading.set(false)
+                    Log.e(TAG, "Interstitial failed to load ($adUnitId): ${error.code} ${error.message}")
                     onFailed?.invoke(error)
                 }
             }
@@ -85,6 +88,7 @@ class InterstitialAdManager(
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 interstitialAd = null
+                Log.d(TAG, "Interstitial dismissed ($adUnitId)")
                 // preload cho lần sau
                 preload(activity.applicationContext)
                 onClosedOrFailed()
@@ -92,6 +96,7 @@ class InterstitialAdManager(
 
             override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
                 interstitialAd = null
+                Log.e(TAG, "Interstitial failed to show ($adUnitId): ${error.code} ${error.message}")
                 preload(activity.applicationContext)
                 onClosedOrFailed()
             }
@@ -99,6 +104,7 @@ class InterstitialAdManager(
             override fun onAdShowedFullScreenContent() {
                 // clear reference để lần sau load mới
                 interstitialAd = null
+                Log.d(TAG, "Interstitial showed ($adUnitId)")
             }
         }
 
@@ -128,11 +134,16 @@ class InterstitialAdManager(
         onState?.invoke(State.Idle)
 
         if (!ok) {
+            Log.w(TAG, "Interstitial awaitLoaded() failed/timeout ($adUnitId)")
             onLoadFailedOrTimeout()
             return
         }
 
         val shown = showIfReady(activity, onClosedOrFailed)
         if (!shown) onLoadFailedOrTimeout()
+    }
+
+    private companion object {
+        private const val TAG = "AdMob"
     }
 }

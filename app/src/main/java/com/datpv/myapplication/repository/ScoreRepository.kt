@@ -1,7 +1,7 @@
 package com.datpv.myapplication.repository
 
-import com.datpv.myapplication.database.ScoreDao
-import com.datpv.myapplication.database.ScoreEntity
+import com.datpv.myapplication.model.ScoreDao
+import com.datpv.myapplication.model.ScoreEntity
 import kotlinx.coroutines.flow.Flow
 
 class ScoreRepository(private val dao: ScoreDao) {

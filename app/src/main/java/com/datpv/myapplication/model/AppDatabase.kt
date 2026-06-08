@@ -1,4 +1,4 @@
-package com.datpv.myapplication.database
+package com.datpv.myapplication.model
 
 import android.content.Context
 import androidx.room.Database

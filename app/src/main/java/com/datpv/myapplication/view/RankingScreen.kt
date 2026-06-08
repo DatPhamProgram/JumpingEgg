@@ -1,6 +1,7 @@
 package com.datpv.myapplication.view
 
 import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -39,11 +40,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
+import com.datpv.myapplication.viewmodel.RankingViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.datpv.myapplication.R
 import com.datpv.myapplication.admobManager.InterstitialAdManager
-import com.datpv.myapplication.unit.AdFrequencyStore
+import com.datpv.myapplication.util.AdFrequencyStore
 import kotlinx.coroutines.launch
 
 @Composable
@@ -61,15 +63,51 @@ fun RankingScreen(
 
     val scope = rememberCoroutineScope()
 
-    // preload sẵn để giảm khả năng phải loading
-    LaunchedEffect(Unit) {
-        adManager.preload(context)
-    }
-
     var isBackProcessing by remember { mutableStateOf(false) } // chặn spam click
     var showLoading by remember { mutableStateOf(false) }      // hiển thị dialog
 
-    LoadingDialog(show = showLoading)
+    // =========================
+    // ✅ ADS: Interstitial khi mở màn hình (mỗi 3 lần mở)
+    // =========================
+    var isOpenAdShowing by remember { mutableStateOf(false) }
+    var isOpenAdLoading by remember { mutableStateOf(false) }
+
+    // Chặn back trong lúc ad đang load/hiện để tránh race với điều hướng (gây màn hình trắng)
+    BackHandler(enabled = isOpenAdShowing || isOpenAdLoading || isBackProcessing) {
+        // Không làm gì -> chờ ad load/hiện xong rồi mới cho thoát
+    }
+
+    LaunchedEffect(Unit) {
+        adManager.preload(context)
+
+        val act = activity
+        if (act != null &&
+            AdFrequencyStore.decideShowAd(context, AdFrequencyStore.AdSurface.RANKING_OPEN)
+        ) {
+            isOpenAdShowing = true
+            isOpenAdLoading = true
+
+            adManager.showOrQueue(
+                activity = act,
+                timeoutMs = 10_000L,
+                onState = { state ->
+                    isOpenAdLoading = (state == InterstitialAdManager.State.Loading)
+                },
+                onClosedOrFailed = {
+                    isOpenAdLoading = false
+                    isOpenAdShowing = false
+                    scope.launch { adManager.preload(context) }
+                },
+                onLoadFailedOrTimeout = {
+                    isOpenAdLoading = false
+                    isOpenAdShowing = false
+                    scope.launch { adManager.preload(context) }
+                }
+            )
+        }
+    }
+
+    LoadingDialog(show = showLoading || isOpenAdLoading)
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val w = maxWidth
@@ -181,13 +219,8 @@ fun RankingScreen(
                 }
 
                 scope.launch {
-                    val count = AdFrequencyStore.incrementRankingCount(context)
                     val shouldShowAd =
-                        (count == 1) || (count % AdFrequencyStore.NUMBER_DISPLAY_ADS == 0)
-
-                    if (count >= AdFrequencyStore.NUMBER_RESET) {
-                        AdFrequencyStore.resetRankingCount(context)
-                    }
+                        AdFrequencyStore.decideShowAd(context, AdFrequencyStore.AdSurface.RANKING)
 
                     if (!shouldShowAd) {
                         isBackProcessing = false
